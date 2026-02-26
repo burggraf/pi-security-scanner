@@ -1,0 +1,27 @@
+{
+  "name": "pi-security-scanner",
+  "version": "0.1.0",
+  "description": "Security scanner and runtime protection for Pi Coding Agent",
+  "main": "extensions/index.ts",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/burggraf/pi-security-scanner.git"
+  },
+  "keywords": [
+    "pi-package",
+    "security",
+    "scanner"
+  ],
+  "pi": {
+    "extensions": [
+      "extensions/index.ts"
+    ]
+  },
+  "devDependencies": {
+    "@mariozechner/pi-coding-agent": "*",
+    "@sinclair/typebox": "*",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^1.0.0"
+  }
+}
