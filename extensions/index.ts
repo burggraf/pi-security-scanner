@@ -1,4 +1,4 @@
-import { ExtensionContext } from "@mariozechner/pi-coding-agent";
+import { ExtensionAPI, isToolCallEventType } from "@mariozechner/pi-coding-agent";
 import { findExtensions, analyzeExtension } from "../src/scanner.js";
 import { loadShieldConfig, saveShieldConfig } from "../src/shield-config.js";
 import path from "path";
@@ -21,18 +21,22 @@ const SENSITIVE_FILES = [
   /package-lock\.json$/
 ];
 
-export async function activate(ctx: ExtensionContext) {
-  shieldEnabled = await loadShieldConfig();
-  ctx.ui.notify(`Pi Security Scanner activated. Shield: ${shieldEnabled ? "ON" : "OFF"}`);
+export default function (pi: ExtensionAPI) {
+  pi.on("session_start", async (_event, ctx) => {
+    shieldEnabled = await loadShieldConfig();
+    ctx.ui.notify(`Pi Security Scanner activated. Shield: ${shieldEnabled ? "ON" : "OFF"}`, "info");
+  });
 
-  ctx.pi.on("tool_call", async (event) => {
+  pi.on("tool_call", async (event, ctx) => {
     if (!shieldEnabled) return;
-    if (event.tool === "bash") {
-      const command = (event.args as any).command;
+
+    if (isToolCallEventType("bash", event)) {
+      const command = event.input.command;
       const isDangerous = DANGEROUS_PATTERNS.some((regex) => regex.test(command));
 
       if (isDangerous) {
         const confirmed = await ctx.ui.confirm(
+          "Security Warning",
           `Suspicious bash command detected: "${command}". Allow execution?`
         );
         if (!confirmed) {
@@ -41,13 +45,14 @@ export async function activate(ctx: ExtensionContext) {
       }
     }
 
-    if (event.tool === "write" || event.tool === "edit") {
-      const path = (event.args as any).path;
-      const isSensitive = SENSITIVE_FILES.some((regex) => regex.test(path));
+    if (isToolCallEventType("write", event) || isToolCallEventType("edit", event)) {
+      const filePath = event.input.path;
+      const isSensitive = SENSITIVE_FILES.some((regex) => regex.test(filePath));
 
       if (isSensitive) {
         const confirmed = await ctx.ui.confirm(
-          `Attempting to modify sensitive file: "${path}". Allow?`
+          "Security Warning",
+          `Attempting to modify sensitive file: "${filePath}". Allow?`
         );
         if (!confirmed) {
           return { block: true, reason: "Security: User blocked access to sensitive file." };
@@ -56,30 +61,28 @@ export async function activate(ctx: ExtensionContext) {
     }
   });
 
-  ctx.pi.registerCommand({
-    name: "scan-security",
+  pi.registerCommand("security-scan", {
     description: "Scans installed extensions for security vulnerabilities",
-    execute: async () => {
-      ctx.ui.notify("Starting security scan...");
+    handler: async (_args, ctx) => {
+      ctx.ui.notify("Starting security scan...", "info");
       const extensions = await findExtensions();
-      ctx.ui.notify(`Found ${extensions.length} extension files to scan.`);
+      ctx.ui.notify(`Found ${extensions.length} extension files to scan.`, "info");
 
       for (const filePath of extensions) {
         const findings = await analyzeExtension(filePath);
         if (findings.length > 0) {
-          ctx.ui.notify(`Warning in ${path.basename(filePath)}:\n` + findings.join("\n"));
+          ctx.ui.notify(`Warning in ${path.basename(filePath)}:\n` + findings.join("\n"), "warning");
         }
       }
     }
   });
 
-  ctx.pi.registerCommand({
-    name: "toggle-shield",
+  pi.registerCommand("security-shield", {
     description: "Enable or disable the Runtime Shield",
-    execute: async () => {
+    handler: async (_args, ctx) => {
       shieldEnabled = !shieldEnabled;
       await saveShieldConfig(shieldEnabled);
-      ctx.ui.notify(`Runtime Shield is now ${shieldEnabled ? "ENABLED" : "DISABLED"}.`);
+      ctx.ui.notify(`Runtime Shield is now ${shieldEnabled ? "ENABLED" : "DISABLED"}.`, shieldEnabled ? "success" : "info");
     }
   });
 }
