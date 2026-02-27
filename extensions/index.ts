@@ -1,4 +1,5 @@
 import { ExtensionContext } from "@mariozechner/pi-coding-agent";
+import { findExtensions } from "../src/scanner.js";
 
 const DANGEROUS_PATTERNS = [
   /curl\s+.*http/i,
@@ -46,6 +47,16 @@ export async function activate(ctx: ExtensionContext) {
           return { block: true, reason: "Security: User blocked access to sensitive file." };
         }
       }
+    }
+  });
+
+  ctx.pi.registerCommand({
+    name: "scan-security",
+    description: "Scans installed extensions for security vulnerabilities",
+    execute: async () => {
+      ctx.ui.notify("Starting security scan...");
+      const extensions = await findExtensions();
+      ctx.ui.notify(`Found ${extensions.length} extension files to scan.`);
     }
   });
 }
