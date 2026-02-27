@@ -104,14 +104,16 @@ These patterns probe for passwords, API keys, or other sensitive data:
 |---------|-------------|------|
 | `admin password` | Password probing | Attempt to discover credentials |
 | `root password` | Root credential probe | System access attempt |
-| `api_key` | API key probing | Looking for API credentials |
-| `api-key` | API key variant | Alternative format |
 | `master key` | Master key probe | Access to all systems |
 | `print all passwords` | Credential dump | Mass credential extraction |
 | `print all secrets` | Secret extraction | API keys, tokens, etc. |
 | `dump all secrets` | Bulk exfiltration | Mass data theft |
 | `dump credentials` | Credential theft | Account takeover risk |
 | `dump config` | Configuration theft | System reconnaissance |
+| `reveal your api key` | API key extraction | Attempt to extract API credentials |
+| `show your apikey` | API key disclosure | Social engineering for API keys |
+
+**Note**: We intentionally do NOT flag simple mentions of "api_key" or "api-key" in comments, documentation, or configuration examples. Only active extraction attempts (e.g., "reveal your api key") are flagged.
 
 ---
 
@@ -136,6 +138,18 @@ The following patterns are intentionally NOT flagged because they are common in 
 - Standard console logging (`console.log`, `console.error`)
 - Environment variable access for configuration (`process.env`)
 - JSON parsing and serialization
+
+### Excluded Contexts (Not Flagged)
+
+The scanner automatically excludes certain contexts to reduce false positives:
+
+| Context | Example | Why Excluded |
+|---------|---------|--------------|
+| Documentation comments | `/** API key required */` | Legitimate documentation |
+| Inline comments | `// Set your API key here` | Code comments |
+| Environment variable access | `process.env.API_KEY` | Standard configuration |
+| Placeholder text | `your-api-key-here` | Configuration examples |
+| JSDoc annotations | `@param apiKey The API key` | Documentation |
 
 ---
 

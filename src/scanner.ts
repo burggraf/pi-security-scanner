@@ -173,12 +173,13 @@ export const PROMPT_INJECTION_PATTERNS = {
     { pattern: /uncensored|no\s+filters/i, description: "Filter bypass attempt" },
   ],
   LOW: [
-    // Sensitive data probing
+    // Sensitive data probing - only flag when combined with extraction verbs
     { pattern: /(admin|root)\s+password/i, description: "Password probing" },
-    { pattern: /api[_-]?key/i, description: "API key probing" },
     { pattern: /master\s+key/i, description: "Master key probing" },
     { pattern: /print\s+all\s+(passwords|secrets|credentials)/i, description: "Credential dump attempt" },
     { pattern: /dump\s+(all\s+)?(secrets|credentials|config)/i, description: "Data exfiltration attempt" },
+    // API key extraction attempts (not just mentions)
+    { pattern: /(reveal|show|print|dump|extract)\s+(your\s+)?(api[_-]?key|apikey)/i, description: "API key extraction attempt" },
   ],
 };
 
@@ -189,6 +190,26 @@ export interface SecurityFinding {
   category: "CODE_EXECUTION" | "PROMPT_INJECTION";
 }
 
+// Common legitimate patterns that should be excluded from prompt injection detection
+const LEGITIMATE_CONTEXT_PATTERNS = [
+  // Comments explaining API key usage
+  /\*\s*API key/i,
+  /\/\/.*API key/i,
+  /#.*API key/i,
+  // Environment variable setup
+  /process\.env\./i,
+  // Configuration examples
+  /example.*api[_-]?key/i,
+  /your[_-]?api[_-]?key/i,
+  // Documentation
+  /@param.*api/i,
+  /@example/i,
+];
+
+function isLegitimateContext(line: string): boolean {
+  return LEGITIMATE_CONTEXT_PATTERNS.some(pattern => pattern.test(line));
+}
+
 export async function analyzeExtension(filePath: string): Promise<SecurityFinding[]> {
   const content = await fs.readFile(filePath, "utf-8");
   const lines = content.split("\n");
@@ -197,6 +218,11 @@ export async function analyzeExtension(filePath: string): Promise<SecurityFindin
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const lineNum = i + 1;
+    
+    // Skip lines that appear to be legitimate context (comments, docs, etc.)
+    if (isLegitimateContext(line)) {
+      continue;
+    }
 
     // Check code execution patterns (HIGH severity)
     for (const { pattern, description } of SECURITY_PATTERNS.HIGH) {
