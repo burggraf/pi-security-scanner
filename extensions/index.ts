@@ -1,5 +1,6 @@
+import path from "path";
 import { ExtensionContext } from "@mariozechner/pi-coding-agent";
-import { findExtensions } from "../src/scanner.js";
+import { findExtensions, analyzeExtension } from "../src/scanner.js";
 
 const DANGEROUS_PATTERNS = [
   /curl\s+.*http/i,
@@ -57,6 +58,13 @@ export async function activate(ctx: ExtensionContext) {
       ctx.ui.notify("Starting security scan...");
       const extensions = await findExtensions();
       ctx.ui.notify(`Found ${extensions.length} extension files to scan.`);
+
+      for (const filePath of extensions) {
+        const findings = await analyzeExtension(filePath);
+        if (findings.length > 0) {
+          ctx.ui.notify(`Warning in ${path.basename(filePath)}:\n` + findings.join("\n"));
+        }
+      }
     }
   });
 }

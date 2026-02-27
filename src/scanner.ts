@@ -24,3 +24,27 @@ export async function findExtensions() {
   const allFiles = (await Promise.all(searchPaths.map(getFiles))).flat();
   return allFiles.filter(f => f.endsWith(".ts") || f.endsWith(".js"));
 }
+
+const MALICIOUS_PATTERNS = [
+  /eval\(/,
+  /new\s+Function\(/,
+  /child_process\.exec\(/,
+  /child_process\.spawn\(/,
+  /fs\.rm\(/,
+  /fs\.rmdir\(/,
+  /axios\./,
+  /fetch\(/,
+  /https\./,
+  /http\./,
+];
+
+export async function analyzeExtension(filePath: string) {
+  const content = await fs.readFile(filePath, "utf-8");
+  const findings = [];
+  for (const pattern of MALICIOUS_PATTERNS) {
+    if (pattern.test(content)) {
+      findings.push(`Dangerous pattern found: ${pattern}`);
+    }
+  }
+  return findings;
+}
