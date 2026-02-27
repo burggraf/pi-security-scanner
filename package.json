@@ -10,7 +10,10 @@
   "keywords": [
     "pi-package",
     "security",
-    "scanner"
+    "scanner",
+    "antivirus",
+    "prompt injection",
+    "vulnerability"
   ],
   "pi": {
     "extensions": [
