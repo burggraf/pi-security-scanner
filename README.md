@@ -16,7 +16,7 @@ A security extension for `pi-coding-agent` that provides runtime protection and 
 This extension is configured as a pi-package. You can install it by adding it to your Pi configuration:
 
 ```bash
-pi install https://github.com/burggraf/pi-security-scanner
+pi install npm:pi-security-scanner
 ```
 
 ## How it Works
