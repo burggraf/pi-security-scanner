@@ -70,6 +70,7 @@ export default function (pi: ExtensionAPI) {
       ctx.ui.notify(`Found ${extensions.length} extension files to scan.`, "info");
 
       let totalWarnings = 0;
+      const criticalWarnings: string[] = [];
       const highWarnings: string[] = [];
       const mediumWarnings: string[] = [];
       const lowWarnings: string[] = [];
@@ -82,20 +83,23 @@ export default function (pi: ExtensionAPI) {
           
           for (const finding of findings) {
             const lineInfo = finding.line ? ` (line ${finding.line})` : "";
-            const message = `⚠️  ${relativePath}${lineInfo}:\n   ${finding.description}`;
+            const categoryIcon = finding.category === "PROMPT_INJECTION" ? "💉" : "⚠️";
+            const message = `${categoryIcon} ${relativePath}${lineInfo}:\n   [${finding.severity}] ${finding.description}`;
             
-            if (finding.severity === "HIGH") highWarnings.push(message);
+            if (finding.severity === "CRITICAL") criticalWarnings.push(message);
+            else if (finding.severity === "HIGH") highWarnings.push(message);
             else if (finding.severity === "MEDIUM") mediumWarnings.push(message);
             else lowWarnings.push(message);
           }
         }
       }
 
-      const allWarnings = [...highWarnings, ...mediumWarnings, ...lowWarnings];
+      const allWarnings = [...criticalWarnings, ...highWarnings, ...mediumWarnings, ...lowWarnings];
 
       if (allWarnings.length > 0) {
         let summary = "\n🚨 Security Scan Complete\n";
         summary += `   ${totalWarnings} warning(s) found in ${allWarnings.length} file(s)\n`;
+        if (criticalWarnings.length > 0) summary += `   • ${criticalWarnings.length} 🔴 CRITICAL (Prompt Injection)\n`;
         if (highWarnings.length > 0) summary += `   • ${highWarnings.length} HIGH severity\n`;
         if (mediumWarnings.length > 0) summary += `   • ${mediumWarnings.length} MEDIUM severity\n`;
         if (lowWarnings.length > 0) summary += `   • ${lowWarnings.length} LOW severity\n`;

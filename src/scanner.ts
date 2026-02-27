@@ -134,42 +134,119 @@ export const SECURITY_PATTERNS = {
   ],
 };
 
+/**
+ * Prompt injection patterns that may indicate an extension is attempting to
+ * manipulate the LLM's behavior or extract sensitive information.
+ * 
+ * These patterns look for strings that could be used to:
+ * - Override system instructions
+ * - Extract system prompts or configuration
+ * - Bypass safety guidelines
+ * - Inject malicious instructions into context
+ */
+export const PROMPT_INJECTION_PATTERNS = {
+  CRITICAL: [
+    // Direct instruction overrides
+    { pattern: /ignore\s+(all\s+)?previous\s+instructions/i, description: "Instruction override attempt" },
+    { pattern: /disregard\s+(your\s+)?(system\s+)?(prompt|instructions)/i, description: "System prompt disregard attempt" },
+    { pattern: /forget\s+(everything|all|your)\s+(I\s+said|previous|system|instructions)/i, description: "Memory wipe attempt" },
+    { pattern: /override\s+your\s+(safety\s+)?(rules|guidelines|restrictions)/i, description: "Safety override attempt" },
+    { pattern: /bypass\s+(your\s+)?(safety|security|restrictions)/i, description: "Security bypass attempt" },
+  ],
+  HIGH: [
+    // System prompt exfiltration
+    { pattern: /reveal\s+(the\s+)?system\s+prompt/i, description: "System prompt exfiltration attempt" },
+    { pattern: /show\s+(me\s+)?(your\s+)?(system\s+)?prompt/i, description: "Prompt disclosure attempt" },
+    { pattern: /print\s+(the\s+)?(system\s+)?prompt/i, description: "Prompt extraction attempt" },
+    { pattern: /what\s+is\s+your\s+(system\s+)?prompt/i, description: "Prompt inquiry" },
+    { pattern: /reveal\s+(your\s+)?hidden\s+(instructions|prompt|configuration)/i, description: "Hidden config extraction" },
+    { pattern: /show\s+internal\s+configuration/i, description: "Internal config disclosure" },
+  ],
+  MEDIUM: [
+    // Role/persona manipulation
+    { pattern: /act\s+as\s+(DAN|do\s+anything\s+now)/i, description: "DAN jailbreak attempt" },
+    { pattern: /act\s+as\s+(a\s+)?(system\s+)?admin(istrator)?/i, description: "Admin role assumption" },
+    { pattern: /pretend\s+you('re|\s+are)\s+an?\s+admin/i, description: "Admin impersonation" },
+    { pattern: /for\s+the\s+rest\s+of\s+this\s+conversation,\s+you\s+are/i, description: "Persistent role override" },
+    { pattern: /developer\s+mode.*ignore/i, description: "Developer mode jailbreak" },
+    { pattern: /jailbreak/i, description: "Jailbreak keyword" },
+    { pattern: /uncensored|no\s+filters/i, description: "Filter bypass attempt" },
+  ],
+  LOW: [
+    // Sensitive data probing
+    { pattern: /(admin|root)\s+password/i, description: "Password probing" },
+    { pattern: /api[_-]?key/i, description: "API key probing" },
+    { pattern: /master\s+key/i, description: "Master key probing" },
+    { pattern: /print\s+all\s+(passwords|secrets|credentials)/i, description: "Credential dump attempt" },
+    { pattern: /dump\s+(all\s+)?(secrets|credentials|config)/i, description: "Data exfiltration attempt" },
+  ],
+};
+
 export interface SecurityFinding {
-  severity: "HIGH" | "MEDIUM" | "LOW";
+  severity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
   description: string;
   line?: number;
+  category: "CODE_EXECUTION" | "PROMPT_INJECTION";
 }
 
 export async function analyzeExtension(filePath: string): Promise<SecurityFinding[]> {
   const content = await fs.readFile(filePath, "utf-8");
   const lines = content.split("\n");
   const findings: SecurityFinding[] = [];
-  
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const lineNum = i + 1;
-    
-    // Check HIGH severity patterns
+
+    // Check code execution patterns (HIGH severity)
     for (const { pattern, description } of SECURITY_PATTERNS.HIGH) {
       if (pattern.test(line)) {
-        findings.push({ severity: "HIGH", description, line: lineNum });
+        findings.push({ severity: "HIGH", description, line: lineNum, category: "CODE_EXECUTION" });
       }
     }
-    
-    // Check MEDIUM severity patterns
+
+    // Check code execution patterns (MEDIUM severity)
     for (const { pattern, description } of SECURITY_PATTERNS.MEDIUM) {
       if (pattern.test(line)) {
-        findings.push({ severity: "MEDIUM", description, line: lineNum });
+        findings.push({ severity: "MEDIUM", description, line: lineNum, category: "CODE_EXECUTION" });
       }
     }
-    
-    // Check LOW severity patterns
+
+    // Check code execution patterns (LOW severity)
     for (const { pattern, description } of SECURITY_PATTERNS.LOW) {
       if (pattern.test(line)) {
-        findings.push({ severity: "LOW", description, line: lineNum });
+        findings.push({ severity: "LOW", description, line: lineNum, category: "CODE_EXECUTION" });
+      }
+    }
+
+    // Check prompt injection patterns (CRITICAL severity)
+    for (const { pattern, description } of PROMPT_INJECTION_PATTERNS.CRITICAL) {
+      if (pattern.test(line)) {
+        findings.push({ severity: "CRITICAL", description, line: lineNum, category: "PROMPT_INJECTION" });
+      }
+    }
+
+    // Check prompt injection patterns (HIGH severity)
+    for (const { pattern, description } of PROMPT_INJECTION_PATTERNS.HIGH) {
+      if (pattern.test(line)) {
+        findings.push({ severity: "HIGH", description, line: lineNum, category: "PROMPT_INJECTION" });
+      }
+    }
+
+    // Check prompt injection patterns (MEDIUM severity)
+    for (const { pattern, description } of PROMPT_INJECTION_PATTERNS.MEDIUM) {
+      if (pattern.test(line)) {
+        findings.push({ severity: "MEDIUM", description, line: lineNum, category: "PROMPT_INJECTION" });
+      }
+    }
+
+    // Check prompt injection patterns (LOW severity)
+    for (const { pattern, description } of PROMPT_INJECTION_PATTERNS.LOW) {
+      if (pattern.test(line)) {
+        findings.push({ severity: "LOW", description, line: lineNum, category: "PROMPT_INJECTION" });
       }
     }
   }
-  
+
   return findings;
 }
