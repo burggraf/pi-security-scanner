@@ -3,3 +3,4 @@ dist
 .pi
 *.log
 .pi-security-shield.json
+package-lock.json
