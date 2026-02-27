@@ -9,6 +9,13 @@ const DANGEROUS_PATTERNS = [
   />\s*~\/\.ssh/
 ];
 
+const SENSITIVE_FILES = [
+  /\.env$/,
+  /\.ssh\//,
+  /\.git\/config$/,
+  /package-lock\.json$/
+];
+
 export async function activate(ctx: ExtensionContext) {
   ctx.ui.notify("Pi Security Scanner activated.");
 
@@ -26,6 +33,19 @@ export async function activate(ctx: ExtensionContext) {
         }
       }
     }
-    console.log(`Tool call detected: ${event.tool}`);
+
+    if (event.tool === "write" || event.tool === "edit") {
+      const path = (event.args as any).path;
+      const isSensitive = SENSITIVE_FILES.some((regex) => regex.test(path));
+
+      if (isSensitive) {
+        const confirmed = await ctx.ui.confirm(
+          `Attempting to modify sensitive file: "${path}". Allow?`
+        );
+        if (!confirmed) {
+          return { block: true, reason: "Security: User blocked access to sensitive file." };
+        }
+      }
+    }
   });
 }
