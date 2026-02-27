@@ -7,6 +7,8 @@ A security extension for `pi-coding-agent` that provides runtime protection and 
 ### 🛡️ Runtime Shield
 - **Bash Interceptor**: Detects and blocks dangerous bash commands like `curl`, `wget`, `nc`, and unauthorized system modifications.
 - **File Access Monitor**: Protects sensitive files like `.env`, `.ssh/` keys, and `.git/config` from unauthorized writes or edits.
+- **`/toggle-shield` Command**: Enables or disables the Runtime Shield. When disabled, no bash commands or file access are intercepted.
+
 
 ### 🔍 Static Scanner
 - **/scan-security Command**: Scans all installed Pi extensions (globally and locally) for dangerous patterns such as `eval()`, `child_process.exec()`, and unauthorized network calls.

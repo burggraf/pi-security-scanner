@@ -1,6 +1,9 @@
-import path from "path";
 import { ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { findExtensions, analyzeExtension } from "../src/scanner.js";
+import { loadShieldConfig, saveShieldConfig } from "../src/shield-config.js";
+import path from "path";
+
+let shieldEnabled = true;
 
 const DANGEROUS_PATTERNS = [
   /curl\s+.*http/i,
@@ -19,9 +22,11 @@ const SENSITIVE_FILES = [
 ];
 
 export async function activate(ctx: ExtensionContext) {
-  ctx.ui.notify("Pi Security Scanner activated.");
+  shieldEnabled = await loadShieldConfig();
+  ctx.ui.notify(`Pi Security Scanner activated. Shield: ${shieldEnabled ? "ON" : "OFF"}`);
 
   ctx.pi.on("tool_call", async (event) => {
+    if (!shieldEnabled) return;
     if (event.tool === "bash") {
       const command = (event.args as any).command;
       const isDangerous = DANGEROUS_PATTERNS.some((regex) => regex.test(command));
@@ -65,6 +70,16 @@ export async function activate(ctx: ExtensionContext) {
           ctx.ui.notify(`Warning in ${path.basename(filePath)}:\n` + findings.join("\n"));
         }
       }
+    }
+  });
+
+  ctx.pi.registerCommand({
+    name: "toggle-shield",
+    description: "Enable or disable the Runtime Shield",
+    execute: async () => {
+      shieldEnabled = !shieldEnabled;
+      await saveShieldConfig(shieldEnabled);
+      ctx.ui.notify(`Runtime Shield is now ${shieldEnabled ? "ENABLED" : "DISABLED"}.`);
     }
   });
 }
