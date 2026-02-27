@@ -13,6 +13,14 @@ A security extension for `pi-coding-agent` that provides runtime protection and 
 ### 🔍 Static Scanner
 - **`/security-scan` Command**: Scans all installed Pi extensions (globally and locally) for dangerous patterns such as `eval()`, `child_process.exec()`, and unauthorized network calls.
 
+## Security Check Documentation
+
+For detailed information about all security checks, see [docs/security-checks.md](docs/security-checks.md). This document explains:
+- What patterns are flagged and why
+- Severity levels (HIGH, MEDIUM, LOW)
+- How to respond to different types of warnings
+- What patterns are intentionally NOT flagged (to reduce false positives)
+
 ## Installation
 
 This extension is configured as a pi-package. You can install it by adding it to your Pi configuration:
